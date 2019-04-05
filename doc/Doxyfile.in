@@ -1,0 +1,11 @@
+PROJECT_NAME           = "Haply-API-C++"
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@/doc/
+INPUT                  = @CMAKE_SOURCE_DIR@
+RECURSIVE              = YES
+EXCLUDE                = @CMAKE_SOURCE_DIR@/external
+GENERATE_LATEX         = NO
+MARKDOWN_SUPPORT       = YES
+FILE_PATTERNS          = *.cpp \
+                         *.h \
+                         *.md
+USE_MDFILE_AS_MAINPAGE = @CMAKE_SOURCE_DIR@/README.md

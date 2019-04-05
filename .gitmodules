@@ -1,0 +1,4 @@
+[submodule "serial"]
+	path = external/github-HaplyHaptics-serial
+	url = git@github.com:HaplyHaptics/serial.git
+	branch = no-catkin
