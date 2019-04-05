@@ -21,7 +21,7 @@ Optional:
 ### Procedure
 
 * Clone the git repository through SSH: `git clone git@github.com:HaplyHaptics/Haply-API-cpp.git`
-* Update git submodules in the cloned repository: `git submodule --update --init`
+* Update git submodules in the cloned repository: `git submodule update --init --recursive`
 * Compile with CMake using your favorite integrated development environment or terminal. Turn CMake option `BUILD_DOC` to `ON` to enable documentation compilation (target: `doc`).
 
 ## Contributing
