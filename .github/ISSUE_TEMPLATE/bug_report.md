@@ -23,9 +23,14 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Desktop (please complete the following information):**
+** Computer (please complete the following information):**
  - OS: [e.g. Ubuntu]
  - Version [e.g. 19.04]
+
+**Haply Device (please complete the following information):**
+ - Board model: [e.g. Haply, Haply M0, Haply M3]
+ - Board version: [e.g. 0.3]
+ - Driver version: [e.g. 0.1.0, master branch]
 
 **Additional context**
 Add any other context about the problem here.
