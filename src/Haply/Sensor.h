@@ -2,8 +2,8 @@
  **********************************************************************************************************************
  * @file       Sensor.h
  * @author     Colin Gallacher, Steven Ding, Christian Frisson
- * @version    V0.1.0
- * @date       01-March-2017
+ * @version    V2.1.0
+ * @date       23-April-2019
  * @brief      Sensor class definition
  **********************************************************************************************************************
  * @attention
@@ -22,21 +22,47 @@ class Sensor
 {
 
 private:
-    float encoder_offset;
-    float encoder_resolution;
-    float angle;
-    int encoder_port;
+
+    int     encoder;
+    int     direction;
+    float   encoder_offset;
+    float   encoder_resolution;
+    float   value;
+    int     port;
 
     /**
-       * Constructs a Sensor with the given motor port position, to be initialized with the given angular offset,
-       * at the specified step resoluiton
-       *
-       * @param    offset initial offset in degrees that the encoder sensor should be initialized at
-       * @param    resolution step resolution of the encoder sensor
-       * @param    port specific motor port the encoder sensor is connect at (usually same as actuator)
-       */
+     * Constructs a Sensor set using motor port position one
+     */
 public:
-    Sensor(float offset = 0, float resolution = 0, int port = 1);
+    Sensor();
+
+    /**
+    * Constructs a Sensor with the given motor port position, to be initialized with the given angular offset,
+    * at the specified step resolution (used for construction of encoder sensor)
+    *
+    * @param    encoder encoder index
+    * @param    offset initial offset in degrees that the encoder sensor should be initialized at
+    * @param    resolution step resolution of the encoder sensor
+    * @param    port specific motor port the encoder sensor is connect at (usually same as actuator)
+    */
+public:
+    Sensor(int encoder, int direction, float offset, float resolution, int port);
+
+    /**
+     * Set encoder index parameter of sensor
+     *
+     * @param    encoder index
+     */
+public:
+    void set_encoder(int encoder);
+
+    /**
+     * Set encoder direction of detection
+     *
+     * @param    encoder index
+     */
+public:
+    void set_direction(int direction);
 
     /**
        * Set offset parameter of sensor
@@ -63,16 +89,31 @@ public:
     void set_port(int port);
 
     /**
-       * Set angle variable to the specified angle
-       *
-       * @param    angle angle value
-       */
+     * Set sensor value variable to the specified input
+     *
+     * @param    value sensor value
+     */
 public:
-    void set_angle(float angle);
+    void set_value(float value);
+
 
     /**
-       * @return    current offset parameter
-       */
+     * @return    encoder index
+     */
+public:
+    int get_encoder();
+
+
+    /**
+     * @return    encoder direction
+     */
+public:
+    int get_direction();
+
+
+    /**
+     * @return    current offset parameter
+     */
 public:
     float get_offset();
 
@@ -88,12 +129,14 @@ public:
 public:
     int get_port();
 
+
     /**
-       * @return    current angle information
-       */
+     * @return    current sensor value information
+     */
 public:
-    float get_angle();
-};
+    float get_value();
+
+}; // class Sensor
 
 } // namespace Haply
 

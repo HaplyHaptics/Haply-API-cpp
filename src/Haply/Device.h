@@ -1,10 +1,10 @@
 /**
  **********************************************************************************************************************
- * @file       Device.h
+ * @file  Device.h
  * @author     Colin Gallacher, Steven Ding, Christian Frisson
- * @version    V0.1.0
- * @date       01-March-2017
- * @brief      Device class definition
+ * @version    V2.1.0
+ * @date  17-April-2019
+ * @brief Device class definition
  **********************************************************************************************************************
  * @attention
  *
@@ -15,12 +15,12 @@
 #ifndef __HaplyDevice__
 #define __HaplyDevice__
 
-#include "Haply/Types.h"
-#include "Haply/DeviceType.h"
 #include "Haply/Actuator.h"
-#include "Haply/Sensor.h"
 #include "Haply/Board.h"
 #include "Haply/Mechanisms.h"
+#include "Haply/Pwm.h"
+#include "Haply/Sensor.h"
+#include "Haply/Types.h"
 
 namespace Haply
 {
@@ -28,189 +28,178 @@ namespace Haply
 class Device
 {
 
-public:
-    DeviceType       device_type;
-public:
-    byte 			       deviceID;
-
-public:
-    std::vector<Actuator>    	 motors;
-public:
-    std::vector<Sensor>		     encoders;
-
-public:
-    Board* 	      	 deviceLink;
-public:
-    Mechanisms* 		   mechanisms;
-
-public:
-    std::vector<byte> 			     actuator_positions;
-public:
-    std::vector<byte>			     encoder_positions;
 private:
-    byte 			       communicationType;
-private:
-    std::vector<float>   		   params;
+    Board* device_link;
+
+    byte device_id;
+    Mechanisms* mechanism;
+
+    byte communication_type;
+
+    int  actuators_active;
+    std::vector<Actuator> motors;
+
+    int  encoders_active;
+    std::vector<Sensor> encoders;
+
+    int  sensors_active;
+    std::vector<Sensor> sensors;
+
+    int  pwms_active;
+    std::vector<Pwm> pwms;
+
+    std::vector<byte> actuator_positions;
+    std::vector<byte> encoder_positions;
 
     /**
-    * Constructs a Device of the specified <code>DeviceType</code>, with the defined <code>deviceID</code>,
-    * connected on the specified <code>Board</code>
+    * Constructs a Device of the specified <code>device_id</code>, connected on the specified <code>Board</code>
     *
-    * @param    device_type the degrees of freedom type of device to be implemented
-    * @param    deviceID ID
-    * @param    deviceLink: serial link used by device
+    * @param    device_id ID
+    * @param    device_link: serial link used by device
     */
 public:
-    Device(DeviceType device_type, byte deviceID, Board* deviceLink);
+    Device(byte device_id, Board* device_link);
 
+    // device setup functions
     /**
-    * Automatic setup of actuators and encoders based on setup parameters
-    */
-private:
-    void device_component_auto_setup();
-
-    /**
-    * Set the indicated actuator to use the specified motor port
-    *
-    * @param    actuator index of actuator that needs parameter to be set or updated
-    * @param    port specified motor port to be used (motor ports 1-4 on the Haply board)
-    */
+     * add new actuator to platform
+     *
+     * @param    actuator index of actuator (and index of 1-4)
+     * @param    roatation positive direction of actuator rotation
+     * @param    port specified motor port to be used (motor ports 1-4 on the Haply board)
+     */
 public:
-    void set_actuator_parameters(int actuator, int port);
+    void add_actuator(int actuator, int rotation, int port);
 
     /**
-    * Set the indicated sensor (encoder) to use the initial offset, resolution, on the specified port
-    *
-    * @param    sensor index of sensor encoder that needs parameters to be set or updated
-    * @param    offset initial offset in degrees that the encoder sensor should be initialized at
-    * @param    resolution step resolution of the encoder sensor
-    * @param    port specific motor port the encoder sensor is connect at (usually same as actuator)
-    */
+     * Add a new encoder to the platform
+     *
+     * @param    actuator index of actuator (an index of 1-4)
+     * @param    positive direction of rotation detection
+     * @param    offset encoder offset in degrees
+     * @param    resolution encoder resolution
+     * @param    port specified motor port to be used (motor ports 1-4 on the Haply board)
+     */
 public:
-    void set_encoder_parameters(int sensor, float offset, float resolution, int port);
+    void add_encoder(int encoder, int rotation, float offset, float resolution, int port);
 
     /**
-    * Replaces the current Mechanisms that is being used with the specified Mechanisms
-    *
-    * @param    mechanisms new Mechanisms to replace the initialized or old Mechanisms currently in use
-    */
+     * Add an analog sensor to platform
+     *
+     * @param    pin the analog pin on haply board to be used for sensor input (Ex: A0)
+     */
 public:
-    void set_new_mechanism(Mechanisms* mechanisms);
+    void add_analog_sensor(std::string pin);
 
     /**
-    * Sets or updates device function parameters and loads frequency and amplitude vaues into params[]
-    * (note* Hapkit specific function)
-    *
-    * @param    function device function to be carried out
-    * @param    frequency frequency variable to be updated
-    * @param    amplitude amplitude variable to be updated
-    */
+     * Add a PWM output pin to the platform
+     *
+     * @param		pin the pin on the haply board to use as the PWM output pin
+     */
 public:
-    void set_parameters(byte function, float frequency, float amplitude);
+    void add_pwm_pin(int pin);
+
 
     /**
-    * Gathers all encoder sensor setup inforamation of all encoder sensors that are initialized and
-    * sequentialy formats the data based on specified sensor index positions to send over serial port
-    * interface for hardware device initialization
-    */
+     * Set the device mechanism that is to be used
+     *
+     * @param    mechanisms new Mechanisms for use
+     */
+public:
+    void set_mechanism(Mechanisms* mechanisms);
+
+    /**
+     * Gathers all encoder, sensor, pwm setup information of all encoders, sensors, and pwm pins that are
+     * initialized and sequentialy formats the data based on specified sensor index positions to send over
+     * serial port interface for hardware device initialization
+     */
 public:
     void device_set_parameters();
 
     /**
-    * hardware setup verification function (currently not used)
-    */
-public:
-    void device_set_verification();
+     * assigns actuator positions based on actuator port
+     */
+private:
+    void actuator_assignment(int actuator, int port);
 
     /**
-    * Requests encoder angle data from the hardware based on the initialized setup. function also
-    * sends a torque output command of zero torque for each actuator in use
-    */
+     * assigns encoder positions based on actuator port
+     */
+private:
+    void encoder_assignment(int encoder, int port);
+
+
+    // device communication functions
+    /**
+     * Receives angle position and sensor inforamation from the serial port interface and updates each indexed encoder
+     * sensor to their respective received angle and any analog sensor that may be setup
+     */
+public:
+    void device_read_data();
+
+    /**
+     * Requests data from the hardware based on the initialized setup. function also sends a torque output
+     * command of zero torque for each actuator in use
+     */
 public:
     void device_read_request();
 
     /**
-    * Transmits specific torques that has been calculated and stored for each actuator over the serial
-    * port interface
-    */
+     * Transmits specific torques that has been calculated and stored for each actuator over the serial
+     * port interface, also transmits specified pwm outputs on pwm pins
+     */
 public:
     void device_write_torques();
 
     /**
-    * Transmits the contents of the params[] array over the serial port interface
-    */
+     * Set pulse of specified PWM pin
+     */
 public:
-    void send_data();
+    void set_pwm_pulse(int pin, float pulse);
 
     /**
-    * Receives angle position inforamation from the serial port interface and updates each indexed encoder sensor
-    * to their respective received angle
-    */
+     * Gets percent PWM pulse value of specified pin
+     */
 public:
-    void device_read_angles();
+    float get_pwm_pulse(int pin);
 
     /**
-    * Receives data from the serial port interface and updates parameters in mechanisms
-    */
-public:
-    void receive_data();
-
-    /**
-    * assigns actuator positions based on actuator port
-    */
-private:
-    void actuator_assignment(int actuator, Actuator m);
-
-    /**
-    * assigns encoder positions based on encoder port
-    */
-private:
-    void encoder_assignment(int encoder, Sensor m);
-
-    /**
-    * Reads and update angles information from device hardware to encoders
-    *
-    * @returns    angles information received from device hardware
-    */
+     * Gathers current state of angles information from encoder objects
+     *
+     * @returns    most recent angles information from encoder objects
+     */
 public:
     std::vector<float> get_device_angles();
 
     /**
-    * Reads and update angles information from device hardware to encoders and performs physics calculations
-    *
-    * @returns    end-effector coordinate position
-    */
+     * Gathers current data from sensor objects
+     *
+     * @returns    most recent analog sensor information from sensor objects
+     */
 public:
-    std::vector<float> get_device_position();
+    std::vector<float> get_sensor_data();
 
     /**
-    * Performs physics calculations based on the given angle values
-    *
-    * @param      angles angles to be used for physics position calculation
-    * @returns    end-effector coordinate position
-    */
+     * Performs physics calculations based on the given angle values
+     *
+     * @param angles angles to be used for physics position calculation
+     * @returns    end-effector coordinate position
+     */
 public:
     std::vector<float> get_device_position(std::vector<float> angles);
 
     /**
-    * Calculates the needed output torques based on forces input and updates each initialized actuator
-    * respectively
-    *
-    * @param     forces forces that need to be generated
-    */
-public:
-    void set_device_torques(std::vector<float> forces);
-
-    /**
-     * Reads and update torques information from device hardware to encoders
+     * Calculates the needed output torques based on forces input and updates each initialized
+     * actuator respectively
      *
-     * @param      angles angles to be used for physics position calculation
-     * @returns    end-effector coordinate position
+     * @param     forces forces that need to be generated
+     * @returns   torques that need to be outputted to the physical device
      */
 public:
-    std::vector<float> get_device_torques();
-};
+    std::vector<float> set_device_torques(std::vector<float> forces);
 
-}
+}; // class Device
+
+} // namespace Haply
 
 #endif // __HaplyDevice__

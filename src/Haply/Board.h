@@ -2,8 +2,8 @@
  **********************************************************************************************************************
  * @file       Board.h
  * @author     Colin Gallacher, Steven Ding, Christian Frisson
- * @version    V0.1.0
- * @date       01-March-2017
+ * @version    V2.1.0
+ * @date       17-April-2019
  * @brief      Board class definition
  **********************************************************************************************************************
  * @attention
@@ -29,7 +29,7 @@ class Board
     Serial *port;
 
 private:
-    byte deviceID;
+    byte device_id;
     int number_of_parameters;
     byte actuator_positions[4];
 
@@ -44,24 +44,23 @@ public:
     /**
        * Formats and transmits the float data array over the serial port
        *
-       * @param     type type of communication taking place
-       * @param     deviceID ID of device transmitting the information
-       * @param     positions the motor positions the data is meant for
-       * @param     data main data payload to be transmitted
+       * @param     communication_type type of communication taking place
+       * @param     device_id ID of device transmitting the information
+       * @param     b_data byte information to be transmitted  * @param     f_data float information to be transmitted
        */
 public:
-    void transmit(byte type, byte deviceID, std::vector<byte> positions, std::vector<float> data);
+    void transmit(byte communication_type, byte device_id, std::vector<byte> b_data, std::vector<float> f_data);
 
     /**
-       * Receives data from the serial port and formats said data to return a float data array
+       * Receives data from the serial port and formats data to return a float data array
        *
        * @param     type type of communication taking place
-       * @param     deviceID ID of the device receiving the information
-       * @param     positions the motor positions the data is meant for
+       * @param     device_id ID of the device receiving the information
+       * @param     expected number for floating point numbers that are expected
        * @return    formatted float data array from the received data
        */
 public:
-    std::vector<float> receive(byte type, byte deviceID, std::vector<byte> positions);
+    std::vector<float> receive(byte communication_type, byte device_id, int expected);
 
     /**
        * @return   a bool indicating if data is available from the serial port
@@ -70,10 +69,11 @@ public:
     bool data_available();
 
     /**
-       * @return   a bool indicating if the board is available from the serial port
-       */
-public:
-    bool board_available();
+      * Sends a reset command to perform a software reset of the Haply board
+      *
+      */
+private:
+    void reset_board();
 
     /**
        * Set serial buffer length for receiving incoming data
@@ -82,34 +82,6 @@ public:
        */
 private:
     void set_buffer(int length);
-
-    /**
-       * Determines how much data should incoming and sets buffer lengths accordingly
-       *
-       * @param    type type of communication taking place
-       * @param    positions the motor positions the data is meant for
-       * @return   number of active motors
-       */
-private:
-    int set_buffer_length(byte type, std::vector<byte> positions);
-
-    /**
-       * Determines if actuator ports are in use and prints warnings accordingly
-       *
-       * @param    positions the motor positions being set
-       */
-private:
-    void port_check(std::vector<byte> positions);
-
-    /**
-       * Formats header control byte for transmission over serial
-       *
-       * @param    type type of communication taking place
-       * @param    positions the motor positions the data is meant for
-       * @return   formatted header control byte
-       */
-private:
-    byte format_header(byte type, std::vector<byte> positions);
 
     /**
        * Translates a float point number to its raw binary format and stores it across four bytes
@@ -128,7 +100,8 @@ private:
        */
 private:
     float BytesToFloat(std::vector<byte> segment);
-};
+
+}; // class Board
 
 } // namespace Haply
 

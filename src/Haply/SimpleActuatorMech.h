@@ -1,10 +1,10 @@
 /**
  **********************************************************************************************************************
- * @file       Mechanisms.h
- * @author     Colin Gallacher, Steven Ding, Christian Frisson
- * @version    V2.0.0
- * @date       17-April-2019
- * @brief      Mechanisms class designed for use as a template.
+ * @file       SimpleActuatorMech.h
+ * @author     Steve Ding, Colin Gallacher, Christian Frisson
+ * @version    V1.0.0
+ * @date       23-April-2019
+ * @brief      Mechanism extension simple example
  **********************************************************************************************************************
  * @attention
  *
@@ -12,16 +12,22 @@
  **********************************************************************************************************************
  */
 
-#ifndef __HaplyMechanisms__
-#define __HaplyMechanisms__
+#ifndef __HaplySimpleActuatorMech__
+#define __HaplySimpleActuatorMech__
 
-#include <vector>
+#include "Haply/Mechanisms.h"
 
 namespace Haply
 {
 
-class Mechanisms
+class SimpleActuatorMech: public Mechanisms
 {
+
+private:
+    float tau;
+
+public:
+    SimpleActuatorMech();
 
     /**
      * Performs the forward kinematics physics calculation of a specific physical mechanism
@@ -30,7 +36,7 @@ class Mechanisms
      *           on the degree of freedom of the mechanism in question)
      */
 public:
-    virtual void forwardKinematics(std::vector<float> angles) = 0;
+    virtual void forwardKinematics(std::vector<float> angles);
 
 
     /**
@@ -40,28 +46,28 @@ public:
      *
      */
 public:
-    virtual void torqueCalculation(std::vector<float> forces) = 0;
+    virtual void torqueCalculation(std::vector<float> forces);
 
 
     /**
      * Performs force calculations
      */
 public:
-    virtual void forceCalculation() = 0;
+    virtual void forceCalculation();
 
 
     /**
      * Performs calculations for position control
      */
 public:
-    virtual void positionControl() = 0;
+    virtual void positionControl();
 
 
     /**
      * Performs inverse kinematics calculations
      */
 public:
-    virtual void inverseKinematics() = 0;
+    virtual void inverseKinematics();
 
 
     /**
@@ -70,7 +76,7 @@ public:
      * @param    parameters mechanism parameters
      */
 public:
-    virtual void set_mechanism_parameters(std::vector<float> parameters) = 0;
+    virtual void set_mechanism_parameters(std::vector<float> parameters);
 
 
     /**
@@ -79,30 +85,31 @@ public:
      * @param    data sensor data from sensors attached to Haply board
      */
 public:
-    virtual void set_sensor_data(std::vector<float> data) = 0;
+    virtual void set_sensor_data(std::vector<float> data);
 
 
     /**
      * @return   end-effector coordinate position
      */
 public:
-    virtual std::vector<float> get_coordinate() = 0;
+    virtual std::vector<float> get_coordinate();
 
     /**
      * @return   torque values from physics calculations
      */
 public:
-    virtual std::vector<float> get_torque() = 0;
+    virtual std::vector<float> get_torque();
 
 
     /**
      * @return   angle values from physics calculations
      */
 public:
-    virtual std::vector<float> get_angle() = 0;
+    virtual std::vector<float> get_angle();
 
-}; // class Mechanisms
+
+}; // class SimpleActuatorMech
 
 } // namespace Haply
 
-#endif // __HaplyMechanisms__
+#endif // __HaplySimpleActuatorMech__

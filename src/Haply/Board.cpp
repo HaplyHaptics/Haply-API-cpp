@@ -2,8 +2,8 @@
  **********************************************************************************************************************
  * @file       Board.cpp
  * @author     Colin Gallacher, Steven Ding, Christian Frisson
- * @version    V0.1.0
- * @date       01-March-2017
+ * @version    V2.1.0
+ * @date       17-April-2019
  * @brief      Board class definition
  **********************************************************************************************************************
  * @attention
@@ -69,65 +69,63 @@ Board::Board(Serial *serial_com)
 /**
  * Formats and transmits the float data array over the serial port
  *
- * @param     type type of communication taking place
- * @param     deviceID ID of device transmitting the information
- * @param     positions the motor positions the data is meant for
- * @param     data main data payload to be transmitted
+ * @param     communication_type type of communication taking place
+ * @param     device_id ID of device transmitting the information
+ * @param     b_data byte information to be transmitted
+ * @param     f_data float information to be transmitted
  */
-void Board::transmit(byte type, byte deviceID, std::vector<byte> positions, std::vector<float> data)
+void Board::transmit(byte communication_type, byte device_id, std::vector<byte> b_data, std::vector<float> f_data)
 {
+    std::vector<byte> out_data,segments;
+    out_data.resize(2 + b_data.size() + 4 * f_data.size());
 
-    std::vector<byte> outData;
-    outData.reserve(2 + 4 * sizeof(data));
+    out_data[0] = communication_type;
+    out_data[1] = device_id;
+    this->device_id = device_id;
 
-    outData.insert(outData.begin(), format_header(type, positions));
-    outData.insert(outData.begin() + 1, deviceID);
-    this->deviceID = deviceID;
+    std::copy(b_data.begin(),b_data.end(),out_data.begin()+2);
 
-    int j = 2;
-    for (int i = 0; i < data.size(); i++) {
+    int j = 2 + b_data.size();
+    for (int i = 0; i < f_data.size(); i++) {
         std::vector<byte> segments;
-        segments.reserve(4);
-        segments = FloatToBytes(data[i]);
-        //System.arraycopy(segments, 0, outData, j, 4);
-        outData.insert(outData.begin() + j, segments.begin(), segments.end());
+        segments = FloatToBytes(f_data[i]);
+        std::copy( segments.begin(), segments.end(), out_data.begin() + j);
         j = j + 4;
     }
 
-    this->port->write(outData);
+    this->port->write(out_data);
 }
 
 /**
- * Receives data from the serial port and formats said data to return a float data array
- *
+ * Receives data from the serial port and formats data to return a float data array
  * @param     type type of communication taking place
- * @param     deviceID ID of the device receiving the information
- * @param     positions the motor positions the data is meant for
+ * @param     device_id ID of the device receiving the information
+ * @param     expected number for floating point numbers that are expected
  * @return    formatted float data array from the received data
  */
-std::vector<float> Board::receive(byte type, byte deviceID, std::vector<byte> positions)
+std::vector<float> Board::receive(byte communication_type, byte device_id, int expected)
 {
 
-    int size = set_buffer_length(type, positions);
+    set_buffer(1 + 4*expected);
 
-    std::vector<byte> inData;
-    inData.reserve(1 + 4 * size);
+    std::vector<byte> in_data;
+    in_data.reserve(1 + 4*expected);
 
-    std::vector<float> data(size);
+    std::vector<float> data;
+    data.reserve(expected);
 
-    this->port->readBytes(inData);
+    this->port->readBytes(in_data);
 
-    if (inData[0] != deviceID) {
+    if (in_data[0] != device_id) {
         std::cerr << "Error, another device expects this data!" << std::endl;
     }
 
     int j = 1;
 
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < expected; i++) {
         std::vector<byte> segments;
-        segments.reserve(4);
-        //System.arraycopy(inData, j, segments, 0, 4);
-        segments.insert(segments.begin(), inData.begin() + j, inData.begin() + j + 4);
+        segments.resize(4);
+        std::copy( in_data.begin() + j, in_data.begin() + j + 4, segments.begin());
         data[i] = BytesToFloat(segments);
         j = j + 4;
     }
@@ -151,12 +149,17 @@ bool Board::data_available()
 }
 
 /**
- * @return   a bool indicating if the board is available from the serial port
- */
-bool Board::board_available()
+  * Sends a reset command to perform a software reset of the Haply board
+  *
+  */
+void Board::reset_board()
 {
+    byte communication_type = 0;
+    byte device_id = 0;
+    std::vector<byte> b_data(0);
+    std::vector<float> f_data(0);
 
-    return port ? port->open() : false;
+    transmit(communication_type, device_id, b_data, f_data);
 }
 
 /**
@@ -167,81 +170,6 @@ bool Board::board_available()
 void Board::set_buffer(int length)
 {
     this->port->buffer(length);
-}
-
-/**
- * Determines how much data should incoming and sets buffer lengths accordingly
- *
- * @param    type type of communication taking place
- * @param    positions the motor positions the data is meant for
- * @return   number of active motors
- */
-int Board::set_buffer_length(byte type, std::vector<byte> positions)
-{
-
-    int m_active = 0;
-
-    for (int i = 0; i < 4; i++) {
-        if (positions[i] > 0) {
-            m_active++;
-        }
-    }
-
-    switch (type) {
-    case 0: // setup command
-        port_check(positions);
-        set_buffer(5);
-        m_active = 1;
-        break;
-    case 1: // read encoder data
-        set_buffer(1 + 4 * m_active);
-        break;
-    }
-
-    return m_active;
-}
-
-/**
- * Determines if actuator ports are in use and prints warnings accordingly
- *
- * @param    positions the motor positions being set
- */
-void Board::port_check(std::vector<byte> positions)
-{
-
-    for (int i = 0; i < 4; i++) {
-        if (actuator_positions[i] > 0 && positions[i] > 0) {
-            std::cerr << "Warning, hardware actuator " << i << " was in use and will be overridden" << std::endl;
-        }
-
-        actuator_positions[i] = positions[i];
-    }
-}
-
-/**
- * Formats header control byte for transmission over serial
- *
- * @param    type type of communication taking place
- * @param    positions the motor positions the data is meant for
- * @return   formatted header control byte
- */
-byte Board::format_header(byte type, std::vector<byte> positions)
-{
-
-    int header = 0;
-
-    for (int i = 0; i < positions.size(); i++) {
-
-        header = header >> 1;
-
-        if (positions[i] > 0) {
-            header = header | 0x0008;
-        }
-    }
-
-    header = header | (type << 4);
-
-    return (byte)header;
 }
 
 /**

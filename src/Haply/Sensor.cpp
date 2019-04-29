@@ -2,8 +2,8 @@
  **********************************************************************************************************************
  * @file       Sensor.cpp
  * @author     Colin Gallacher, Steven Ding, Christian Frisson
- * @version    V0.1.0
- * @date       01-March-2017
+ * @version    V2.1.0
+ * @date       23-April-2019
  * @brief      Sensor class definition
  **********************************************************************************************************************
  * @attention
@@ -17,25 +17,55 @@
 using namespace Haply;
 
 /**
+ * Constructs a Sensor set using motor port position one
+ */
+
+Sensor::Sensor()
+    : Sensor(0, 0, 0, 0, 0)
+{
+
+}
+
+/**
  * Constructs a Sensor with the given motor port position, to be initialized with the given angular offset,
- * at the specified step resoluiton
+ * at the specified step resolution (used for construction of encoder sensor)
  *
+ * @param    encoder encoder index
  * @param    offset initial offset in degrees that the encoder sensor should be initialized at
  * @param    resolution step resolution of the encoder sensor
  * @param    port specific motor port the encoder sensor is connect at (usually same as actuator)
  */
 
-Sensor::Sensor(float offset, float resolution, int port)
+Sensor::Sensor(int encoder, int direction, float offset, float resolution, int port)
 {
+    this->encoder = encoder;
+    this->direction = direction;
     this->encoder_offset = offset;
     this->encoder_resolution = resolution;
-    this->encoder_port = port;
-    float   encoder_offset	      = 0;
-    float   encoder_resolution    = 0;
-    float   angle 			          = 0;
-    int     encoder_port	 	      = 0;
+    this->port = port;
 }
 
+/**
+ * Set encoder index parameter of sensor
+ *
+ * @param    encoder index
+ */
+
+void Sensor::set_encoder(int encoder)
+{
+    this->encoder = encoder;
+}
+
+/**
+ * Set encoder direction of detection
+ *
+ * @param    encoder index
+ */
+
+void Sensor::set_direction(int direction)
+{
+    this->direction = direction;
+}
 
 /**
  * Set offset parameter of sensor
@@ -45,7 +75,7 @@ Sensor::Sensor(float offset, float resolution, int port)
 
 void Sensor::set_offset(float offset)
 {
-    encoder_offset = offset;
+    this->encoder_offset = offset;
 }
 
 
@@ -57,7 +87,7 @@ void Sensor::set_offset(float offset)
 
 void Sensor::set_resolution(float resolution)
 {
-    encoder_resolution = resolution;
+    this->encoder_resolution = resolution;
 }
 
 
@@ -69,19 +99,39 @@ void Sensor::set_resolution(float resolution)
 
 void Sensor::set_port(int port)
 {
-    encoder_port = port;
+    this->port = port;
 }
 
 
 /**
- * Set angle variable to the specified angle
+ * Set sensor value variable to the specified input
  *
- * @param    angle angle value
+ * @param    value sensor value
  */
 
-void Sensor::set_angle(float angle)
+void Sensor::set_value(float value)
 {
-    this->angle = angle;
+    this->value = value;
+}
+
+
+/**
+ * @return    encoder index
+ */
+
+int Sensor::get_encoder()
+{
+    return encoder;
+}
+
+
+/**
+ * @return    encoder direction
+ */
+
+int Sensor::get_direction()
+{
+    return direction;
 }
 
 
@@ -111,17 +161,15 @@ float Sensor::get_resolution()
 
 int Sensor::get_port()
 {
-    return encoder_port;
+    return port;
 }
 
 
 /**
- * @return    current angle information
+ * @return    current sensor value information
  */
 
-float Sensor::get_angle()
+float Sensor::get_value()
 {
-    return angle;
+    return value;
 }
-
-

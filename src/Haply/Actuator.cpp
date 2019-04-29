@@ -2,8 +2,8 @@
  **********************************************************************************************************************
  * @file       Actuator.cpp
  * @author     Colin Gallacher, Steven Ding, Christian Frisson
- * @version    V0.1.0
- * @date       01-March-2017
+ * @version    V2.1.0
+ * @date       15-April-2019
  * @brief      Actuator class definition
  **********************************************************************************************************************
  * @attention
@@ -21,18 +21,44 @@ using namespace Haply;
    */
 Actuator::Actuator()
 {
-    Actuator(1);
+    Actuator(0,0,0);
 }
 
 /**
    * Creates an Actuator using the given motor port position
    *
+   * @param    actuator actuator index
+   * @param    direction for actuator
    * @param    port motor port position for actuator
    */
-Actuator::Actuator(int port)
-    : torque(0), actuator_port(0)
+Actuator::Actuator(int actuator, int direction, int port)
+    : actuator(0), direction(0), torque(0), actuator_port(0)
 {
+    this->actuator = actuator;
+    this->direction = direction;
     this->actuator_port = port;
+}
+
+
+/**
+ * Set actuator index parameter of sensor
+ *
+ * @param    actuator index
+ */
+void Actuator::set_actuator(int actuator)
+{
+    this->actuator = actuator;
+}
+
+
+/**
+ * Set actuator rotation direction
+ *
+ * @param    direction of rotation
+ */
+void Actuator::set_direction(int direction)
+{
+    this->direction = direction;
 }
 
 /**
@@ -53,6 +79,22 @@ void Actuator::set_port(int port)
 void Actuator::set_torque(float torque)
 {
     this->torque = torque;
+}
+
+/**
+ * @return    actuator index
+ */
+int Actuator::get_actuator()
+{
+    return actuator;
+}
+
+/**
+ * @return    actuator direction
+ */
+int Actuator::get_direction()
+{
+    return direction;
 }
 
 /**

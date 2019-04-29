@@ -2,8 +2,8 @@
  **********************************************************************************************************************
  * @file       Device.cpp
  * @author     Colin Gallacher, Steven Ding, Christian Frisson
- * @version    V0.1.0
- * @date       01-March-2017
+ * @version    V2.1.0
+ * @date       17-April-2019
  * @brief      Device class definition
  **********************************************************************************************************************
  * @attention
@@ -14,447 +14,569 @@
 
 #include "Haply/Device.h"
 
-#include "Haply/HaplyOneDoFMech.h"
-#include "Haply/HaplyTwoDoFMech.h"
-#include "Haply/HaplyThreeDoFMech.h"
-#include "Haply/HaplyFourDoFMech.h"
-#include "Haply/HapticPaddleMech.h"
+#include <algorithm>
 
 using namespace Haply;
 
-Device::Device(DeviceType device_type, byte deviceID, Board *deviceLink) : mechanisms(0)
+/**
+    * Constructs a Device of the specified <code>device_id</code>, connected on the specified <code>Board</code>
+    *
+    * @param    device_id ID
+    * @param    device_link: serial link used by device
+    */
+
+Device::Device(byte device_id, Board *device_link)
+    : device_link(0),
+      device_id(0), mechanism(0),
+      communication_type(0),
+      actuators_active(0),
+      encoders_active(0),
+      sensors_active(0),
+      pwms_active(0)
 {
     this->actuator_positions = std::vector<byte>(4, 0);
     this->encoder_positions = std::vector<byte>(4, 0);
-    this->device_type = device_type;
-    this->deviceID = deviceID;
-    this->deviceLink = deviceLink;
-
-    switch (device_type) {
-
-    case HaplyOneDOF: {
-        motors = std::vector<Actuator>(1);
-        encoders = std::vector<Sensor>(1);
-        mechanisms = new HaplyOneDoFMech();
-        device_component_auto_setup();
-        params = std::vector<float>(1);
-    }
-    break;
-    case HaplyTwoDOF: {
-        motors = std::vector<Actuator>(2);
-        encoders = std::vector<Sensor>(2);
-        mechanisms = new HaplyTwoDoFMech();
-        device_component_auto_setup();
-        params = std::vector<float>(2);
-    }
-    break;
-    case HaplyThreeDOF: {
-        motors = std::vector<Actuator>(3);
-        encoders = std::vector<Sensor>(3);
-        mechanisms = new HaplyThreeDoFMech();
-        device_component_auto_setup();
-        params = std::vector<float>(3);
-    }
-    break;
-    case HaplyFourDOF: {
-        motors = std::vector<Actuator>(4);
-        encoders = std::vector<Sensor>(4);
-        mechanisms = new HaplyFourDoFMech();
-        device_component_auto_setup();
-        params = std::vector<float>(4);
-    }
-    break;
-    case HapticPaddle: {
-        motors = std::vector<Actuator>(2);
-        encoders = std::vector<Sensor>(2);
-        mechanisms = new HapticPaddleMech();
-        device_component_auto_setup();
-        params = std::vector<float>(2);
-    }
-    break;
-
-    default:
-        std::cerr << "Error: Undefined device type!" << std::endl;
-        break;
-    }
-
-    this->device_set_parameters();
+    this->device_id = device_id;
+    this->device_link = device_link;
 }
 
+
+
+// device setup functions
 /**
-   * Automatic setup of actuators and encoders based on setup parameters
-   */
-void Device::device_component_auto_setup()
+ * add new actuator to platform
+ *
+ * @param    actuator index of actuator (and index of 1-4)
+ * @param    roatation positive direction of actuator rotation
+ * @param    port specified motor port to be used (motor ports 1-4 on the Haply board)
+ */
+void Device::add_actuator(int actuator, int rotation, int port)
 {
-
-    for (int i = 0; i < motors.size(); i++) {
-        motors[i] = Actuator();
-        this->set_actuator_parameters(i + 1, i + 1);
-    }
-
-    for (int i = 0; i < encoders.size(); i++) {
-        encoders[i] = Sensor();
-
-        this->set_encoder_parameters(i + 1, (i + 1) * 180, 13824, i + 1);
-    }
-}
-
-/**
-   * Set the indicated actuator to use the specified motor port
-   *
-   * @param    actuator index of actuator that needs parameter to be set or updated
-   * @param    port specified motor port to be used (motor ports 1-4 on the Haply board)
-   */
-void Device::set_actuator_parameters(int actuator, int port)
-{
+    bool error = false;
 
     if (port <= 0 || port > 4) {
         std::cerr << "error: actuator position index out of bounds!" << std::endl;
-    } else {
-        switch (actuator) {
+        error = true;
+    }
 
-        case 1:
-            motors[0].set_port(port);
-            actuator_assignment(actuator, motors[0]);
-            break;
-        case 2:
-            motors[1].set_port(port);
-            actuator_assignment(actuator, motors[1]);
-            break;
-        case 3:
-            motors[2].set_port(port);
-            actuator_assignment(actuator, motors[2]);
-            break;
-        case 4:
-            motors[3].set_port(port);
-            actuator_assignment(actuator, motors[3]);
-            break;
-        default:
-            std::cerr << "error: actuator index out of bound! refer to limit of constructed device" << std::endl;
-            break;
+    if(actuator < 1 || actuator > 4) {
+        std::cerr << "error: actuator index out of bounds!" << std::endl;
+        error = true;
+    }
+
+    // determine index for copying
+    int j = 0;
+    for(int i = 0; i < actuators_active; i++) {
+        if(motors[i].get_actuator() < actuator) {
+            j++;
         }
+
+        if(motors[i].get_actuator() == actuator) {
+            std::cerr << "error: actuator " << actuator << " has already been set" << std::endl;
+            error = true;
+        }
+    }
+
+    if(!error) {
+        std::vector<Actuator> temp(actuators_active + 1);
+
+        std::copy( motors.begin() + 0, motors.begin() + 0 + motors.size(), temp.begin());
+
+        if(j < actuators_active) {
+            std::copy( motors.begin() + j, motors.begin() + j+1 + motors.size() - j, temp.begin());
+        }
+
+        temp[j] = Actuator(actuator, rotation, port);
+        actuator_assignment(actuator, port);
+
+        this->motors = temp;
+        actuators_active++;
     }
 }
 
 /**
-   * Set the indicated sensor (encoder) to use the initial offset, resolution, on the specified port
-   *
-   * @param    sensor index of sensor encoder that needs parameters to be set or updated
-   * @param    offset initial offset in degrees that the encoder sensor should be initialized at
-   * @param    resolution step resolution of the encoder sensor
-   * @param    port specific motor port the encoder sensor is connect at (usually same as actuator)
-   */
-void Device::set_encoder_parameters(int sensor, float offset, float resolution, int port)
+ * Add a new encoder to the platform
+ *
+ * @param    actuator index of actuator (an index of 1-4)
+ * @param    positive direction of rotation detection
+ * @param    offset encoder offset in degrees
+ * @param    resolution encoder resolution
+ * @param    port specified motor port to be used (motor ports 1-4 on the Haply board)
+ */
+void Device::add_encoder(int encoder, int rotation, float offset, float resolution, int port)
 {
+    bool error = false;
 
     if (port <= 0 || port > 4) {
         std::cerr << "error: encoder position index out of bounds!" << std::endl;
-    } else {
-        switch (sensor) {
+    }
 
-        case 1:
-            encoders[0].set_offset(offset);
-            encoders[0].set_resolution(resolution);
-            encoders[0].set_port(port);
-            encoder_assignment(sensor, encoders[0]);
-            break;
-        case 2:
-            encoders[1].set_offset(offset);
-            encoders[1].set_resolution(resolution);
-            encoders[1].set_port(port);
-            encoder_assignment(sensor, encoders[1]);
-            break;
-        case 3:
-            encoders[2].set_offset(offset);
-            encoders[2].set_resolution(resolution);
-            encoders[2].set_port(port);
-            encoder_assignment(sensor, encoders[2]);
-            break;
-        case 4:
-            encoders[3].set_offset(offset);
-            encoders[3].set_resolution(resolution);
-            encoders[3].set_port(port);
-            encoder_assignment(sensor, encoders[3]);
-            break;
-        default:
-            std::cerr << "error: actuator index out of bound! refer to limit of constructed device" << std::endl;
-            break;
+    if(encoder < 1 || encoder > 4) {
+        std::cerr << "error: encoder index out of bounds!" << std::endl;
+        error = true;
+    }
+
+    // determine index for copying
+    int j = 0;
+    for(int i = 0; i < encoders_active; i++) {
+        if(encoders[i].get_encoder() < encoder) {
+            j++;
         }
+
+        if(encoders[i].get_encoder() == encoder) {
+            std::cerr << "error: encoder " << encoder << " has already been set" << std::endl;
+            error = true;
+        }
+    }
+
+    if(!error) {
+        std::vector<Sensor> temp(encoders_active + 1);
+
+        std::copy( encoders.begin() + 0, encoders.begin() + 0 + encoders.size(), temp.begin());
+
+        if(j < encoders_active) {
+            std::copy( encoders.begin() + j, encoders.begin() + j+1 + encoders.size() - j, temp.begin());
+        }
+
+        temp[j] = Sensor(encoder, rotation, offset, resolution, port);
+        encoder_assignment(encoder, port);
+
+        this->encoders = temp;
+
+        encoders_active++;
     }
 }
 
 /**
-   * Replaces the current Mechanisms that is being used with the specified Mechanisms
-   *
-   * @param    mechanisms new Mechanisms to replace the initialized or old Mechanisms currently in use
-   */
-void Device::set_new_mechanism(Mechanisms *mechanisms)
+ * Add an analog sensor to platform
+ *
+ * @param    pin the analog pin on haply board to be used for sensor input (Ex: A0)
+ */
+void Device::add_analog_sensor(std::string pin)
 {
-    this->mechanisms = mechanisms;
+    // set sensor to be size zero
+    bool error = false;
+
+    char port = pin.at(0);
+    std::string number = pin.substr(1);
+
+    int value = atoi(number.c_str());
+    value += 54;
+
+    for(int i = 0; i < sensors_active; i++) {
+        if(value == sensors[i].get_port()) {
+            std::cerr << "error: Analog pin: A" << (value - 54) << " has already been set" << std::endl;
+            error = true;
+        }
+    }
+
+    if(port != 'A' || value < 54 || value > 65) {
+        std::cerr << "error: outside analog pin range" << std::endl;
+        error = true;
+    }
+
+    if(!error) {
+        std::vector<Sensor> temp;
+        std::copy( sensors.begin(), sensors.end(), temp.begin());
+        temp[sensors_active].set_port(value);
+        sensors = temp;
+        sensors_active++;
+    }
 }
 
 /**
-   * Sets or updates device function parameters and loads frequency and amplitude vaues into params[]
-   * (note* Hapkit specific function)
-   *
-   * @param    function device function to be carried out
-   * @param    frequency frequency variable to be updated
-   * @param    amplitude amplitude variable to be updated
-   */
-void Device::set_parameters(byte function, float frequency, float amplitude)
+ * Add a PWM output pin to the platform
+ *
+ * @param		pin the pin on the haply board to use as the PWM output pin
+ */
+void Device::add_pwm_pin(int pin)
 {
-    deviceID = function;
-    params[0] = frequency;
-    params[1] = amplitude;
+    bool error = false;
+
+    for(int i = 0; i < pwms_active; i++) {
+        if(pin == pwms[i].get_pin()) {
+            std::cerr << "error: PWM pin: " << pin << " has already been set" << std::endl;
+            error = true;
+        }
+    }
+
+    if(pin < 0 || pin > 13) {
+        std::cerr << "error: outside PWM pin range" << std::endl;
+        error = true;
+    }
+
+    if(pin == 0 || pin == 1) {
+        std::cerr << "warning: 0 and 1 are not PWM pins on Haply M3 or Haply original" << std::endl;
+    }
+
+
+    if(!error) {
+        std::vector<Pwm> temp;
+        std::copy( pwms.begin(), pwms.end(), temp.begin());
+
+        temp[pwms_active].set_pin(pin);
+        pwms = temp;
+        pwms_active++;
+    }
 }
 
 /**
-   * Gathers all encoder sensor setup inforamation of all encoder sensors that are initialized and
-   * sequentialy formats the data based on specified sensor index positions to send over serial port
-   * interface for hardware device initialization
-   */
+ * Set the device mechanism that is to be used
+ *
+ * @param    mechanism new Mechanisms for use
+ */
+void Device::set_mechanism(Mechanisms *mechanism)
+{
+    this->mechanism = mechanism;
+}
+
+/**
+ * Gathers all encoder, sensor, pwm setup information of all encoders, sensors, and pwm pins that are
+ * initialized and sequentialy formats the data based on specified sensor index positions to send over
+ * serial port interface for hardware device initialization
+ */
 void Device::device_set_parameters()
 {
 
-    communicationType = 0;
-    std::vector<float> parameter_data(2 * encoders.size());
+    communication_type = 1;
 
-    int j = 0;
-    for (int i = 0; i < encoder_positions.size(); i++) {
+    int control;
 
-        if (actuator_positions[i] > 0) {
-            parameter_data[2 * j] = encoders[actuator_positions[i] - 1].get_offset();
-            parameter_data[2 * j + 1] = encoders[actuator_positions[i] - 1].get_resolution();
-            j++;
+    std::vector<float> encoder_parameters;
+
+    std::vector<byte> encoder_params;
+    std::vector<byte> motor_params;
+    std::vector<byte> sensor_params;
+    std::vector<byte> pwm_params;
+
+    if(encoders_active > 0) {
+        encoder_params.resize(encoders_active + 1);
+        control = 0;
+
+        for(int i = 0; i < encoders.size(); i++) {
+            if(encoders[i].get_encoder() != (i+1)) {
+                std::cerr << "warning, improper encoder indexing" << std::endl;
+                encoders[i].set_encoder(i+1);
+                encoder_positions[encoders[i].get_port() - 1] = (byte)encoders[i].get_encoder();
+            }
+        }
+
+        for(int i = 0; i < encoder_positions.size(); i++) {
+            control = control >> 1;
+
+            if(encoder_positions[i] > 0) {
+                control = control | 0x0008;
+            }
+        }
+
+        encoder_params[0] = (byte)control;
+
+        encoder_parameters.resize(2*encoders_active);
+
+        int j = 0;
+        for(int i = 0; i < encoder_positions.size(); i++) {
+            if(encoder_positions[i] > 0) {
+                encoder_parameters[2*j] = encoders[encoder_positions[i]-1].get_offset();
+                encoder_parameters[2*j+1] = encoders[encoder_positions[i]-1].get_resolution();
+                j++;
+                encoder_params[j] = (byte)encoders[encoder_positions[i]-1].get_direction();
+            }
+        }
+    } else {
+        encoder_params.resize(1);
+        encoder_params[0] = 0;
+    }
+
+
+    if(actuators_active > 0) {
+        motor_params.resize(actuators_active + 1);
+        control = 0;
+
+        for(int i = 0; i < motors.size(); i++) {
+            if(motors[i].get_actuator() != (i+1)) {
+                std::cerr << "warning, improper actuator indexing" << std::endl;
+                motors[i].set_actuator(i+1);
+                actuator_positions[motors[i].get_port() - 1] = (byte)motors[i].get_actuator();
+            }
+        }
+
+        for(int i = 0; i < actuator_positions.size(); i++) {
+            control = control >> 1;
+
+            if(actuator_positions[i] > 0) {
+                control = control | 0x0008;
+            }
+        }
+
+        motor_params[0] = (byte)control;
+
+        int j = 1;
+        for(int i = 0; i < actuator_positions.size(); i++) {
+            if(actuator_positions[i] > 0) {
+                motor_params[j] = (byte)motors[actuator_positions[i]-1].get_direction();
+                j++;
+            }
+        }
+    } else {
+        motor_params.resize(1);
+        motor_params[0] = 0;
+    }
+
+
+    if(sensors_active > 0) {
+        sensor_params.resize(sensors_active + 1);
+        sensor_params[0] = (byte)sensors_active;
+
+        for(int i = 0; i < sensors_active; i++) {
+            sensor_params[i+1] = (byte)sensors[i].get_port();
+        }
+
+        //Arrays.sort(sensor_params);
+        std::sort(sensor_params.begin(),sensor_params.end());
+
+        for(int i = 0; i < sensors_active; i++) {
+            sensors[i].set_port(sensor_params[i+1]);
+        }
+
+    } else {
+        sensor_params.resize(1);
+        sensor_params[0] = 0;
+    }
+
+
+    if(pwms_active > 0) {
+        std::vector<byte> temp(pwms_active);
+
+        pwm_params.resize(pwms_active + 1);
+        pwm_params[0] = (byte)pwms_active;
+
+
+        for(int i = 0; i < pwms_active; i++) {
+            temp[i] = (byte)pwms[i].get_pin();
+        }
+
+        //Arrays.sort(temp);
+        std::sort(temp.begin(),temp.end());
+
+        for(int i = 0; i < pwms_active; i++) {
+            pwms[i].set_pin(temp[i]);
+            pwm_params[i+1] = (byte)pwms[i].get_pin();
+        }
+
+    } else {
+        pwm_params.resize(1);
+        pwm_params[0] = 0;
+    }
+
+    std::vector<byte> encMtrSenPwm;
+
+    encMtrSenPwm.resize(motor_params.size()  + encoder_params.size() + sensor_params.size() + pwm_params.size());
+
+    std::copy( motor_params.begin(), motor_params.end(), encMtrSenPwm.begin());
+
+    std::copy( encoder_params.begin(), encoder_params.end(), encMtrSenPwm.begin()+motor_params.size());
+
+    std::copy( sensor_params.begin(), sensor_params.end(), encMtrSenPwm.begin()+motor_params.size()+encoder_params.size());
+
+    std::copy( pwm_params.begin(), pwm_params.end(), encMtrSenPwm.begin()+motor_params.size()+encoder_params.size()+sensor_params.size());
+
+    device_link->transmit(communication_type, device_id, encMtrSenPwm, encoder_parameters);
+}
+
+/**
+ * assigns actuator positions based on actuator port
+ */
+void Device::actuator_assignment(int actuator, int port)
+{
+    if(actuator_positions[port - 1] > 0) {
+        std::cerr << "warning, double check actuator port usage" << std::endl;
+    }
+
+    this->actuator_positions[port - 1] = (byte) actuator;
+}
+
+/**
+ * assigns encoder positions based on actuator port
+ */
+void Device::encoder_assignment(int encoder, int port)
+{
+
+    if(encoder_positions[port - 1] > 0) {
+        std::cerr << "warning, double check encoder port usage" << std::endl;
+    }
+
+    this->encoder_positions[port - 1] = (byte) encoder;
+}
+
+// device communication functions
+/**
+ * Receives angle position and sensor inforamation from the serial port interface and updates each indexed encoder
+ * sensor to their respective received angle and any analog sensor that may be setup
+ */
+void Device::device_read_data()
+{
+    communication_type = 2;
+    int data_count = 0;
+
+    std::vector<float> device_data = device_link->receive(communication_type, device_id, sensors_active + encoders_active);
+
+    for(int i = 0; i < sensors_active; i++) {
+        sensors[i].set_value(device_data[data_count]);
+        data_count++;
+    }
+
+    for(int i = 0; i < encoder_positions.size(); i++) {
+        if(encoder_positions[i] > 0) {
+            encoders[encoder_positions[i]-1].set_value(device_data[data_count]);
+            data_count++;
         }
     }
-
-    deviceLink->transmit(communicationType, deviceID, actuator_positions, parameter_data);
 }
 
 /**
-   * hardware setup verification function (currently not used)
-   */
-void Device::device_set_verification()
-{
-
-    communicationType = 0;
-
-    if (deviceLink->data_available()) {
-        std::vector<float> recieve = deviceLink->receive(communicationType, deviceID, actuator_positions);
-    }
-}
-
-/**
-   * Requests encoder angle data from the hardware based on the initialized setup. function also
-   * sends a torque output command of zero torque for each actuator in use
-   */
+ * Requests data from the hardware based on the initialized setup. function also sends a torque output
+ * command of zero torque for each actuator in use
+ */
 void Device::device_read_request()
 {
-    communicationType = 1;
+    communication_type = 2;
+    std::vector<byte> pulses(pwms_active);
+    std::vector<float> encoder_request(actuators_active);
 
-    std::vector<float> encoder_request(motors.size());
+    for(int i = 0; i < pwms.size(); i++) {
+        pulses[i] = (byte)pwms[i].get_value();
+    }
 
+    // think about this more encoder is detached from actuators
     int j = 0;
-    for (int i = 0; i < encoder_positions.size(); i++) {
-
-        if (actuator_positions[i] > 0) {
+    for(int i = 0; i < actuator_positions.size(); i++) {
+        if(actuator_positions[i] > 0) {
             encoder_request[j] = 0;
             j++;
         }
     }
 
-    deviceLink->transmit(communicationType, deviceID, actuator_positions, encoder_request);
+    device_link->transmit(communication_type, device_id, pulses, encoder_request);
 }
 
 /**
-   * Transmits specific torques that has been calculated and stored for each actuator over the serial
-   * port interface
-   */
+ * Transmits specific torques that has been calculated and stored for each actuator over the serial
+ * port interface, also transmits specified pwm outputs on pwm pins
+ */
 void Device::device_write_torques()
 {
+    communication_type = 2;
+    std::vector<byte> pulses(pwms_active,0);
+    std::vector<float> device_torques(actuators_active);
 
-    communicationType = 1;
-
-    std::vector<float> device_torques(motors.size());
+    for(int i = 0; i < pwms.size(); i++) {
+        pulses[i] = (byte)pwms[i].get_value();
+    }
 
     int j = 0;
-    for (int i = 0; i < actuator_positions.size(); i++) {
-        if (actuator_positions[i] > 0) {
-            device_torques[j] = motors[actuator_positions[i] - 1].get_torque();
+    for(int i = 0; i < actuator_positions.size(); i++) {
+        if(actuator_positions[i] > 0) {
+            device_torques[j] = motors[actuator_positions[i]-1].get_torque();
             j++;
         }
     }
 
-    deviceLink->transmit(communicationType, deviceID, actuator_positions, device_torques);
+    device_link->transmit(communication_type, device_id, pulses, device_torques);
 }
 
 /**
-   * Transmits the contents of the params[] array over the serial port interface
-   */
-void Device::send_data()
-{
-    communicationType = 1;
-    deviceLink->transmit(communicationType, deviceID, actuator_positions, params);
-}
-
-/**
-   * Receives angle position inforamation from the serial port interface and updates each indexed encoder sensor
-   * to their respective received angle
-   */
-void Device::device_read_angles()
+ * Set pulse of specified PWM pin
+ */
+void Device::set_pwm_pulse(int pin, float pulse)
 {
 
-    communicationType = 1;
-
-    std::vector<float> angle_data = deviceLink->receive(communicationType, deviceID, encoder_positions);
-
-    int j = 0;
-    for (int i = 0; i < encoder_positions.size(); i++) {
-        if (encoder_positions[i] > 0) {
-            encoders[actuator_positions[i] - 1].set_angle(angle_data[j]);
-            j++;
+    for(int i = 0; i < pwms.size(); i++) {
+        if(pwms[i].get_pin() == pin) {
+            pwms[i].set_pulse(pulse);
         }
     }
 }
 
-/**
-   * Receives data from the serial port interface and updates parameters in mechanisms
-   */
-void Device::receive_data()
-{
-    communicationType = 1;
-    std::vector<float> data = deviceLink->receive(communicationType, deviceID, actuator_positions);
-    mechanisms->set_mechanism_parameters(data);
-}
 
 /**
-   * assigns actuator positions based on actuator port
-   */
-void Device::actuator_assignment(int actuator, Actuator m)
+ * Gets percent PWM pulse value of specified pin
+ */
+float Device::get_pwm_pulse(int pin)
 {
 
-    switch (m.get_port()) {
-    case 1:
-        this->actuator_positions[0] = (byte)actuator;
-        break;
-    case 2:
-        this->actuator_positions[1] = (byte)actuator;
-        break;
-    case 3:
-        this->actuator_positions[2] = (byte)actuator;
-        break;
-    case 4:
-        this->actuator_positions[3] = (byte)actuator;
-        break;
-    default:
-        std::cerr << "Error, actuator position out of bound" << std::endl;
-        break;
+    float pulse = 0;
+
+    for(int i = 0; i < pwms.size(); i++) {
+        if(pwms[i].get_pin() == pin) {
+            pulse = pwms[i].get_pulse();
+        }
     }
+
+    return pulse;
 }
 
 /**
-   * assigns encoder positions based on encoder port
-   */
-void Device::encoder_assignment(int encoder, Sensor m)
-{
-
-    switch (m.get_port()) {
-    case 1:
-        this->encoder_positions[0] = (byte)encoder;
-        break;
-    case 2:
-        this->encoder_positions[1] = (byte)encoder;
-        break;
-    case 3:
-        this->encoder_positions[2] = (byte)encoder;
-        break;
-    case 4:
-        this->encoder_positions[3] = (byte)encoder;
-        break;
-    default:
-        std::cerr << "Error, actuator position out of bound" << std::endl;
-        break;
-    }
-}
-
-/**
-   * Reads and update angles information from device hardware to encoders
-   *
-   * @returns    angles information received from device hardware
-   */
+ * Gathers current state of angles information from encoder objects
+ *
+ * @returns    most recent angles information from encoder objects
+ */
 std::vector<float> Device::get_device_angles()
 {
+    std::vector<float> angles(encoders_active);
 
-    this->device_read_angles();
-    std::vector<float> angles(encoders.size());
-
-    for (int i = 0; i < encoders.size(); i++) {
-        angles[i] = this->encoders[i].get_angle();
+    for(int i = 0; i < encoders_active; i++) {
+        angles[i] = encoders[i].get_value();
     }
 
     return angles;
 }
 
+
 /**
-   * Reads and update angles information from device hardware to encoders and performs physics calculations
-   *
-   * @returns    end-effector coordinate position
-   */
-std::vector<float> Device::get_device_position()
+ * Gathers current data from sensor objects
+ *
+ * @returns    most recent analog sensor information from sensor objects
+ */
+std::vector<float> Device::get_sensor_data()
 {
+    std::vector<float> data(sensors_active);
 
-    this->device_read_angles();
-    std::vector<float> angles(encoders.size());
-
-    for (int i = 0; i < encoders.size(); i++) {
-        angles[i] = this->encoders[i].get_angle();
+    int j = 0;
+    for(int i = 0; i < sensors_active; i++) {
+        data[i] = sensors[i].get_value();
     }
 
-    this->mechanisms->forwardKinematics(angles);
-    std::vector<float> end_effector_position = this->mechanisms->get_coordinate();
-
-    return end_effector_position;
+    return data;
 }
 
 /**
-   * Performs physics calculations based on the given angle values
-   *
-   * @param      angles angles to be used for physics position calculation
-   * @returns    end-effector coordinate position
-   */
-std::vector<float> Device::get_device_position(std::vector<float> angles)
-{
-
-    this->mechanisms->forwardKinematics(angles);
-    std::vector<float> end_effector_position = this->mechanisms->get_coordinate();
-
-    return end_effector_position;
-}
-
-/**
-   * Calculates the needed output torques based on forces input and updates each initialized actuator
-   * respectively
-   *
-   * @param     forces forces that need to be generated
-   */
-void Device::set_device_torques(std::vector<float> forces)
-{
-    this->mechanisms->torqueCalculation(forces);
-    std::vector<float> torques = this->mechanisms->get_torque();
-    for (int i = 0; i < motors.size(); i++) {
-        this->motors[i].set_torque(torques[i]);
-    }
-}
-
-/**
- * Reads and update torques information from device hardware to encoders
+ * Performs physics calculations based on the given angle values
  *
  * @param      angles angles to be used for physics position calculation
  * @returns    end-effector coordinate position
  */
-std::vector<float> Device::get_device_torques()
+std::vector<float> Device::get_device_position(std::vector<float> angles)
 {
-    std::vector<float> torques = this->mechanisms->get_torque();
+
+    this->mechanism->forwardKinematics(angles);
+    std::vector<float> end_effector_position = this->mechanism->get_coordinate();
+
+    return end_effector_position;
+}
+
+/**
+ * Calculates the needed output torques based on forces input and updates each initialized
+ * actuator respectively
+ *
+ * @param     forces forces that need to be generated
+ * @returns   torques that need to be outputted to the physical device
+ */
+std::vector<float> Device::set_device_torques(std::vector<float> forces)
+{
+    this->mechanism->torqueCalculation(forces);
+    std::vector<float> torques = this->mechanism->get_torque();
+    for (int i = 0; i < actuators_active; i++) {
+        this->motors[i].set_torque(torques[i]);
+    }
     return torques;
 }

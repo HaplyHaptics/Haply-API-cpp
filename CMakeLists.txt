@@ -35,32 +35,27 @@ else()
 endif()
 
 # Core library
-include_directories(.)
-include_directories(src)
+include_directories(${CMAKE_SOURCE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/src)
 set(SRC
 src/Haply/Actuator.cpp
 src/Haply/Board.cpp
 src/Haply/Device.cpp
-src/Haply/HaplyFourDoFMech.cpp
-src/Haply/HaplyOneDoFMech.cpp
-src/Haply/HaplyThreeDoFMech.cpp
-src/Haply/HaplyTwoDoFMech.cpp
-src/Haply/HapticPaddleMech.cpp
+src/Haply/Pantograph.cpp
+src/Haply/Pwm.cpp
 src/Haply/Sensor.cpp
+src/Haply/SimpleActuatorMech.cpp
 )
 set(HDR
 src/Haply/Actuator.h
 src/Haply/Board.h
 src/Haply/Device.h
-src/Haply/DeviceType.h
-src/Haply/HaplyFourDoFMech.h
-src/Haply/HaplyOneDoFMech.h
-src/Haply/HaplyThreeDoFMech.h
-src/Haply/HaplyTwoDoFMech.h
-src/Haply/HapticPaddleMech.h
 src/Haply/Mechanisms.h
+src/Haply/Pantograph.h
+src/Haply/Pwm.h
 src/Haply/Sensor.h
 src/Haply/Serial.h
+src/Haply/SimpleActuatorMech.h
 src/Haply/Types.h
 )
 

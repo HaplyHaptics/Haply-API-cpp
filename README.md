@@ -4,17 +4,40 @@ Haply C++ API is a cross-platform C++ library to interface with the opensource H
 
 ## Versions
 
-  * Haply C++ API v0.1.0 (current): requires Haply Modular Haptic Development Kit Firmware v0.1+ for Haply Board v0.1+ (not yet compatible with Haply M0 and M3 boards), only working with 2-DOF pantograph mechanism.
+### Haply C++ API v1.0.0 (current)
+
+#### Compatibility with boards and firmwares
+
+* Haply Modular Haptic Development Kit Firmware v0.4+ for Haply Board v0.3
+* Haply M0 Firmware v0.3+ for Haply M0 v0.3
+* Haply M3 Firmware v0.4+ for Haply M3 v1.5 
+    
+#### Available mechanisms
+
+* 2-DOF pantograph
+
+### Haply C++ API v0.1.0 (old)
+
+#### Compatibility with boards and firmwares
+  
+* Haply Modular Haptic Development Kit Firmware v0.1+ for Haply Board v0.1+
+* NOT compatible with Haply M0 or M3 boards
+
+#### Available mechanisms
+
+* 2-DOF pantograph
 
 ## Installation
 
 ### Dependencies
 
-Required:
+#### Required
+
 * [CMake](http://www.cmake.org) (cross-platform build environment)
 * [git](https://git-scm.com) (code versioning)
 
-Optional:
+#### Optional
+
 * [doxygen](https://github.com/doxygen/doxygen) (documentation generator)
 * [graphviz](http://graphviz.org) (diagram generator)
 
