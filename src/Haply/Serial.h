@@ -79,14 +79,14 @@ public:
     *
     * @param   in_data buffer to store the bytes
     */
-    virtual void readBytes(std::vector<byte>& in_data) = 0;
+    virtual void readBytes(std::vector<Haply::byte>& in_data) = 0;
 
     /**
     * Writes a group of bytes to the serial port
     *
     * @param   out_data buffer of bytes to write
     */
-    virtual void write(std::vector<byte> out_data) = 0;
+    virtual void write(std::vector<Haply::byte> out_data) = 0;
 };
 
 } // namespace Haply
