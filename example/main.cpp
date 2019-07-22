@@ -128,4 +128,6 @@ int main(int argc, char *argv[])
         i++;
         _sleep(1); // adjust this sleep value to pace messages
     }
+
+    return 0;
 }
