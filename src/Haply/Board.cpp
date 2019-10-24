@@ -64,6 +64,7 @@ Board::Board(Serial *serial_com)
     std::fill(actuator_positions, actuator_positions + 4, 0);
     port = serial_com;
     port->clear();
+    this->reset_board();
 }
 
 /**
@@ -112,7 +113,7 @@ std::vector<float> Board::receive(byte communication_type, byte device_id, int e
     in_data.reserve(1 + 4*expected);
 
     std::vector<float> data;
-    data.reserve(expected);
+    data.resize(expected);
 
     this->port->readBytes(in_data);
 
