@@ -28,6 +28,28 @@ else(USE_DEBUG)
         endif()
 endif(USE_DEBUG)
 
+#statically linking VC++ isn't supported for WindowsPhone/WindowsStore
+if(CMAKE_SYSTEM_NAME STREQUAL WindowsPhone OR CMAKE_SYSTEM_NAME STREQUAL WindowsStore)
+	option(USE_MSVC_RUNTIME_LIBRARY_DLL "Use MSVC Runtime Library DLL (/MD or /MDd)" ON)
+else()
+	option(USE_MSVC_RUNTIME_LIBRARY_DLL "Use MSVC Runtime Library DLL (/MD or /MDd)" OFF)
+endif(CMAKE_SYSTEM_NAME STREQUAL WindowsPhone OR CMAKE_SYSTEM_NAME STREQUAL WindowsStore)
+
+if(MSVC)
+	if(NOT USE_MSVC_RUNTIME_LIBRARY_DLL)
+                message("Statically linking VC++")
+		#We statically link to reduce dependancies
+		foreach(flag_var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO )
+			if(${flag_var} MATCHES "/MD")
+				string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+			endif(${flag_var} MATCHES "/MD")
+			if(${flag_var} MATCHES "/MDd")
+				STRING(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")
+			endif(${flag_var} MATCHES "/MDd")
+		endforeach(flag_var)
+	endif(NOT USE_MSVC_RUNTIME_LIBRARY_DLL)
+endif(MSVC)
+
 if(NOT CMAKE_VERSION VERSION_LESS 3.1)
     set(CMAKE_CXX_STANDARD 11)
 else()
