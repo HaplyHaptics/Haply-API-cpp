@@ -1,4 +1,4 @@
-# Haply C++ API
+# Haply C++ API (DEPRECATED)
 
 Haply C++ API is a cross-platform C++ library to interface with the opensource Haply Development Kit.
 
